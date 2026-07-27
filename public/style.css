@@ -1,0 +1,335 @@
+:root {
+  --bg: var(--tg-theme-bg-color, #0B1220);
+  --surface: #121B2E;
+  --surface-2: #182541;
+  --text: var(--tg-theme-text-color, #F4F6F8);
+  --text-dim: var(--tg-theme-hint-color, #8B95A8);
+  --hairline: rgba(255,255,255,0.08);
+  --pitch: #1FA65A;
+  --pitch-dim: #16803F;
+  --live: #E5484D;
+  --amber: #F5A623;
+  --radius: 14px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  height: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  padding-bottom: 78px;
+}
+
+.ticker-wrap {
+  background: linear-gradient(90deg, var(--pitch-dim), var(--pitch));
+  overflow: hidden;
+  white-space: nowrap;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.2);
+}
+
+.ticker {
+  display: inline-block;
+  padding-left: 100%;
+  animation: scroll-ticker 28s linear infinite;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  color: #06210F;
+}
+
+.ticker-item {
+  margin-right: 48px;
+}
+
+@keyframes scroll-ticker {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-100%); }
+}
+
+.app-header {
+  padding: 18px 20px 10px;
+}
+
+.brand {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 30px;
+  line-height: 1;
+  letter-spacing: 0.01em;
+}
+
+.brand-mark { color: var(--text); }
+.brand-num { color: var(--pitch); }
+
+.header-sub {
+  color: var(--text-dim);
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.screen {
+  padding: 4px 16px 24px;
+  min-height: 40vh;
+}
+
+.section-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 600;
+  font-size: 20px;
+  letter-spacing: 0.01em;
+  margin: 18px 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+}
+
+.card:active {
+  background: var(--surface-2);
+}
+
+.match-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.match-teams {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.match-meta {
+  color: var(--text-dim);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.score {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 22px;
+  min-width: 56px;
+  text-align: right;
+}
+
+.live-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--live);
+  margin-right: 6px;
+  box-shadow: 0 0 0 0 rgba(229,72,77,0.6);
+  animation: pulse-dot 1.6s infinite;
+  vertical-align: middle;
+}
+
+@keyframes pulse-dot {
+  0%   { box-shadow: 0 0 0 0 rgba(229,72,77,0.55); }
+  70%  { box-shadow: 0 0 0 8px rgba(229,72,77,0); }
+  100% { box-shadow: 0 0 0 0 rgba(229,72,77,0); }
+}
+
+.empty-state {
+  text-align: center;
+  color: var(--text-dim);
+  padding: 40px 20px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.empty-state .big {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 24px;
+  color: var(--text);
+  display: block;
+  margin-bottom: 6px;
+}
+
+.table-row {
+  display: grid;
+  grid-template-columns: 28px 1fr 40px 40px;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 14px;
+}
+
+.table-row:last-child { border-bottom: none; }
+
+.table-row.header {
+  color: var(--text-dim);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.rank { color: var(--text-dim); font-family: 'Barlow Condensed', sans-serif; font-weight: 600; }
+.pts { font-weight: 700; text-align: right; }
+.pld { color: var(--text-dim); text-align: right; }
+
+.news-item {
+  display: block;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.news-title {
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.news-meta {
+  color: var(--text-dim);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.btn {
+  background: var(--pitch);
+  color: #06210F;
+  border: none;
+  border-radius: 10px;
+  padding: 11px 18px;
+  font-weight: 600;
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
+}
+
+.btn:active { background: var(--pitch-dim); }
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--hairline);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.search-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.search-row input {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 11px 14px;
+  color: var(--text);
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
+}
+
+.search-row input::placeholder { color: var(--text-dim); }
+
+.pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.pill {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pill button {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 15px;
+  line-height: 1;
+  padding: 0;
+}
+
+.tabbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  background: var(--surface);
+  border-top: 1px solid var(--hairline);
+  padding: 8px 4px calc(8px + env(safe-area-inset-bottom));
+  z-index: 10;
+}
+
+.tab {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-family: 'Inter', sans-serif;
+  padding: 4px 0;
+}
+
+.tab.active {
+  color: var(--pitch);
+}
+
+.trivia-card {
+  background: linear-gradient(160deg, var(--surface), var(--surface-2));
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  padding: 20px 18px;
+}
+
+.trivia-q {
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.4;
+  margin-bottom: 14px;
+}
+
+.trivia-a {
+  color: var(--pitch);
+  font-weight: 600;
+  margin-top: 12px;
+  font-size: 15px;
+}
+
+.spinner-row {
+  display: flex;
+  justify-content: center;
+  padding: 30px 0;
+  color: var(--text-dim);
+  font-size: 13px;
+}
