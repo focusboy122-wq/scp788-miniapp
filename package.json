@@ -1,0 +1,9 @@
+{
+  "name": "scp788-miniapp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SCP788BOT Telegram Mini App - Netlify static site + one function for RSS news",
+  "dependencies": {
+    "rss-parser": "^3.13.0"
+  }
+}
