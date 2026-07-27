@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>SCP788BOT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+
+<div class="ticker-wrap" id="tickerWrap">
+  <div class="ticker" id="ticker">
+    <span class="ticker-item">Loading fixtures&hellip;</span>
+  </div>
+</div>
+
+<header class="app-header">
+  <div class="brand">
+    <span class="brand-mark">SCP</span><span class="brand-num">788</span>
+  </div>
+  <div class="header-sub" id="headerSub">Your daily sports companion</div>
+</header>
+
+<main id="screen" class="screen"></main>
+
+<nav class="tabbar" id="tabbar">
+  <button class="tab active" data-tab="today">
+    <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M7 2v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7zm12 8v10H5V10h14z"/></svg>
+    <span>Today</span>
+  </button>
+  <button class="tab" data-tab="live">
+    <svg viewBox="0 0 24 24" width="20" height="20"><circle cx="12" cy="12" r="5" fill="currentColor"/></svg>
+    <span>Live</span>
+  </button>
+  <button class="tab" data-tab="table">
+    <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M3 3h18v4H3V3zm0 6h18v4H3V9zm0 6h18v4H3v-4z"/></svg>
+    <span>Table</span>
+  </button>
+  <button class="tab" data-tab="news">
+    <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M4 4h16v16H4V4zm2 3v2h12V7H6zm0 4v2h12v-2H6zm0 4v2h8v-2H6z"/></svg>
+    <span>News</span>
+  </button>
+  <button class="tab" data-tab="me">
+    <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-4.4 0-8 2.2-8 5v2h16v-2c0-2.8-3.6-5-8-5z"/></svg>
+    <span>Me</span>
+  </button>
+</nav>
+
+<script src="app.js"></script>
+</body>
+</html>
