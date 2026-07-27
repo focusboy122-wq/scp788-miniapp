@@ -11,6 +11,9 @@ const FOLLOWS_KEY = "scp788_follows";
 
 const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
 
+// ---------------------------------------------------------------------
+// Telegram bootstrap
+// ---------------------------------------------------------------------
 function initTelegram() {
   if (!tg) return;
   tg.ready();
@@ -20,6 +23,10 @@ function initTelegram() {
     : "Your daily sports companion";
 }
 
+// ---------------------------------------------------------------------
+// Storage: Telegram CloudStorage with a localStorage fallback so this
+// still works when previewing outside Telegram during development.
+// ---------------------------------------------------------------------
 function storageGet(key) {
   return new Promise((resolve) => {
     if (tg && tg.CloudStorage) {
@@ -69,12 +76,33 @@ async function removeFollow(teamId) {
   return next;
 }
 
+// ---------------------------------------------------------------------
+// TheSportsDB helpers
+// ---------------------------------------------------------------------
+const FETCH_TIMEOUT_MS = 10000;
+
+// Never throws — a failed or slow request just resolves to null so the
+// UI can always fall back to an empty/error state instead of hanging on
+// a stuck spinner forever.
+async function safeFetchJson(url) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (err) {
+    console.error("Request failed:", url, err);
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function sdbGet(path, params) {
   const url = new URL(`${SPORTSDB_BASE}/${path}`);
   Object.entries(params || {}).forEach(([k, v]) => url.searchParams.set(k, v));
-  const res = await fetch(url.toString());
-  if (!res.ok) return null;
-  return res.json();
+  return safeFetchJson(url.toString());
 }
 
 async function searchTeam(name) {
@@ -113,37 +141,52 @@ function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
+// ---------------------------------------------------------------------
+// News (via Netlify function)
+// ---------------------------------------------------------------------
 async function fetchNews(query) {
   const url = query ? `${NEWS_ENDPOINT}?q=${encodeURIComponent(query)}` : NEWS_ENDPOINT;
-  const res = await fetch(url);
-  if (!res.ok) return [];
-  const data = await res.json();
-  return data.items || [];
+  const data = await safeFetchJson(url);
+  return (data && data.items) || [];
 }
 
+// ---------------------------------------------------------------------
+// Ticker (signature element) — scrolls today's + live fixtures for
+// followed teams along the top, stadium-scoreboard style.
+// ---------------------------------------------------------------------
 async function refreshTicker() {
-  const follows = await getFollows();
   const tickerEl = document.getElementById("ticker");
+  if (!tickerEl) return;
 
-  if (follows.length === 0) {
-    tickerEl.innerHTML = `<span class="ticker-item">Follow a team in the Me tab to see fixtures here</span>`;
-    return;
-  }
+  try {
+    const follows = await getFollows();
 
-  const items = [];
-  for (const f of follows.slice(0, 8)) {
-    const events = await teamNextEvents(f.idTeam);
-    const next = events[0];
-    if (next) {
-      items.push(`${next.strHomeTeam} vs ${next.strAwayTeam} — ${next.dateEvent} ${next.strTime || ""}`.trim());
+    if (follows.length === 0) {
+      tickerEl.innerHTML = `<span class="ticker-item">Follow a team in the Me tab to see fixtures here</span>`;
+      return;
     }
-  }
 
-  tickerEl.innerHTML = items.length
-    ? items.map((i) => `<span class="ticker-item">${escapeHtml(i)}</span>`).join("")
-    : `<span class="ticker-item">No upcoming fixtures found for your teams</span>`;
+    const items = [];
+    for (const f of follows.slice(0, 8)) {
+      const events = await teamNextEvents(f.idTeam);
+      const next = events[0];
+      if (next) {
+        items.push(`${next.strHomeTeam} vs ${next.strAwayTeam} — ${next.dateEvent} ${next.strTime || ""}`.trim());
+      }
+    }
+
+    tickerEl.innerHTML = items.length
+      ? items.map((i) => `<span class="ticker-item">${escapeHtml(i)}</span>`).join("")
+      : `<span class="ticker-item">No upcoming fixtures found for your teams</span>`;
+  } catch (err) {
+    console.error("Ticker refresh failed:", err);
+    tickerEl.innerHTML = `<span class="ticker-item">Couldn't load fixtures right now</span>`;
+  }
 }
 
+// ---------------------------------------------------------------------
+// Rendering helpers
+// ---------------------------------------------------------------------
 function escapeHtml(str) {
   const div = document.createElement("div");
   div.textContent = str;
@@ -162,87 +205,104 @@ function emptyState(big, sub) {
   return `<div class="empty-state"><span class="big">${escapeHtml(big)}</span>${escapeHtml(sub || "")}</div>`;
 }
 
+function errorState(sub) {
+  return emptyState("Couldn't load that", sub || "Check your connection and try again.");
+}
+
+// ---------------------------------------------------------------------
+// Screens
+// ---------------------------------------------------------------------
 async function renderToday() {
   setScreen(loadingRow("Checking today's fixtures…"));
-  const follows = await getFollows();
+  try {
+    const follows = await getFollows();
 
-  if (follows.length === 0) {
-    setScreen(emptyState("No teams yet", "Head to the Me tab and follow a team to see today's matches."));
-    return;
-  }
-
-  const today = todayISO();
-  let rows = [];
-
-  for (const f of follows) {
-    const events = await teamNextEvents(f.idTeam);
-    const todays = events.filter((e) => e.dateEvent === today);
-    for (const ev of todays) {
-      rows.push({ ...ev, followedTeam: f.strTeam });
+    if (follows.length === 0) {
+      setScreen(emptyState("No teams yet", "Head to the Me tab and follow a team to see today's matches."));
+      return;
     }
-  }
 
-  if (rows.length === 0) {
-    setScreen(emptyState("Nothing today", "No matches today for your followed teams. Check back tomorrow."));
-    return;
-  }
+    const today = todayISO();
+    let rows = [];
 
-  const html = [`<div class="section-title">Today · ${today}</div>`];
-  for (const ev of rows) {
-    html.push(`
-      <div class="card">
-        <div class="match-row">
-          <div>
-            <div class="match-teams">${escapeHtml(ev.strHomeTeam)} vs ${escapeHtml(ev.strAwayTeam)}</div>
-            <div class="match-meta">${escapeHtml(ev.strTime || "TBD")} UTC · ${escapeHtml(ev.followedTeam)}</div>
+    for (const f of follows) {
+      const events = await teamNextEvents(f.idTeam);
+      const todays = events.filter((e) => e.dateEvent === today);
+      for (const ev of todays) {
+        rows.push({ ...ev, followedTeam: f.strTeam });
+      }
+    }
+
+    if (rows.length === 0) {
+      setScreen(emptyState("Nothing today", "No matches today for your followed teams. Check back tomorrow."));
+      return;
+    }
+
+    const html = [`<div class="section-title">Today · ${today}</div>`];
+    for (const ev of rows) {
+      html.push(`
+        <div class="card">
+          <div class="match-row">
+            <div>
+              <div class="match-teams">${escapeHtml(ev.strHomeTeam)} vs ${escapeHtml(ev.strAwayTeam)}</div>
+              <div class="match-meta">${escapeHtml(ev.strTime || "TBD")} UTC · ${escapeHtml(ev.followedTeam)}</div>
+            </div>
           </div>
         </div>
-      </div>
-    `);
+      `);
+    }
+    setScreen(html.join(""));
+  } catch (err) {
+    console.error("renderToday failed:", err);
+    setScreen(errorState());
   }
-  setScreen(html.join(""));
 }
 
 async function renderLive() {
   setScreen(loadingRow("Checking for live matches…"));
-  const follows = await getFollows();
+  try {
+    const follows = await getFollows();
 
-  if (follows.length === 0) {
-    setScreen(emptyState("No teams yet", "Head to the Me tab and follow a team first."));
-    return;
-  }
+    if (follows.length === 0) {
+      setScreen(emptyState("No teams yet", "Head to the Me tab and follow a team first."));
+      return;
+    }
 
-  let live = [];
-  for (const f of follows) {
-    const events = await teamNextEvents(f.idTeam);
-    for (const ev of events) {
-      const status = (ev.strStatus || "").toLowerCase();
-      if (status && status !== "not started" && status !== "ns") {
-        live.push(ev);
+    let live = [];
+    for (const f of follows) {
+      const events = await teamNextEvents(f.idTeam);
+      for (const ev of events) {
+        const status = (ev.strStatus || "").toLowerCase();
+        if (status && status !== "not started" && status !== "ns") {
+          live.push(ev);
+        }
       }
     }
-  }
 
-  if (live.length === 0) {
-    setScreen(emptyState("Nothing live", "No live matches right now for your teams. Check the Today tab for upcoming fixtures."));
-    return;
-  }
+    if (live.length === 0) {
+      setScreen(emptyState("Nothing live", "No live matches right now for your teams. Check the Today tab for upcoming fixtures."));
+      return;
+    }
 
-  const html = [`<div class="section-title"><span class="live-dot"></span>Live now</div>`];
-  for (const ev of live) {
-    html.push(`
-      <div class="card">
-        <div class="match-row">
-          <div>
-            <div class="match-teams">${escapeHtml(ev.strHomeTeam)} vs ${escapeHtml(ev.strAwayTeam)}</div>
-            <div class="match-meta">${escapeHtml(ev.strStatus || "")}</div>
+    const html = [`<div class="section-title"><span class="live-dot"></span>Live now</div>`];
+    for (const ev of live) {
+      html.push(`
+        <div class="card">
+          <div class="match-row">
+            <div>
+              <div class="match-teams">${escapeHtml(ev.strHomeTeam)} vs ${escapeHtml(ev.strAwayTeam)}</div>
+              <div class="match-meta">${escapeHtml(ev.strStatus || "")}</div>
+            </div>
+            <div class="score">${ev.intHomeScore ?? "-"}-${ev.intAwayScore ?? "-"}</div>
           </div>
-          <div class="score">${ev.intHomeScore ?? "-"}-${ev.intAwayScore ?? "-"}</div>
         </div>
-      </div>
-    `);
+      `);
+    }
+    setScreen(html.join(""));
+  } catch (err) {
+    console.error("renderLive failed:", err);
+    setScreen(errorState());
   }
-  setScreen(html.join(""));
 }
 
 async function renderTable() {
@@ -262,14 +322,20 @@ async function renderTable() {
   document.getElementById("leagueSearchBtn").addEventListener("click", async () => {
     const q = document.getElementById("leagueSearch").value.trim();
     if (!q) return;
-    document.getElementById("tableResults").innerHTML = loadingRow("Searching…");
-    const leagues = await allLeagues();
-    const match = leagues.find((l) => (l.strLeague || "").toLowerCase().includes(q.toLowerCase()));
-    if (!match) {
-      document.getElementById("tableResults").innerHTML = emptyState("Not found", `No league matching "${q}".`);
-      return;
+    const resultsEl = document.getElementById("tableResults");
+    resultsEl.innerHTML = loadingRow("Searching…");
+    try {
+      const leagues = await allLeagues();
+      const match = leagues.find((l) => (l.strLeague || "").toLowerCase().includes(q.toLowerCase()));
+      if (!match) {
+        resultsEl.innerHTML = emptyState("Not found", `No league matching "${q}".`);
+        return;
+      }
+      await loadTable(match.idLeague, match.strLeague);
+    } catch (err) {
+      console.error("League search failed:", err);
+      resultsEl.innerHTML = errorState();
     }
-    await loadTable(match.idLeague, match.strLeague);
   });
 
   if (defaultLeagueId) {
@@ -278,54 +344,65 @@ async function renderTable() {
 }
 
 async function loadTable(leagueId, leagueName) {
-  const season = currentSeasonGuess();
-  const table = await leagueTable(leagueId, season);
   const container = document.getElementById("tableResults");
   if (!container) return;
 
-  if (table.length === 0) {
-    container.innerHTML = emptyState("No table yet", `${leagueName} — season may not have started.`);
-    return;
-  }
+  try {
+    const season = currentSeasonGuess();
+    const table = await leagueTable(leagueId, season);
 
-  const rows = [`
-    <div class="section-title">${escapeHtml(leagueName)} · ${season}</div>
-    <div class="table-row header"><span>#</span><span>Team</span><span class="pld">P</span><span class="pts">Pts</span></div>
-  `];
-  for (const row of table.slice(0, 20)) {
-    rows.push(`
-      <div class="table-row">
-        <span class="rank">${escapeHtml(row.intRank || "?")}</span>
-        <span>${escapeHtml(row.strTeam || "?")}</span>
-        <span class="pld">${escapeHtml(row.intPlayed ?? "?")}</span>
-        <span class="pts">${escapeHtml(row.intPoints ?? "?")}</span>
-      </div>
-    `);
+    if (table.length === 0) {
+      container.innerHTML = emptyState("No table yet", `${leagueName} — season may not have started.`);
+      return;
+    }
+
+    const rows = [`
+      <div class="section-title">${escapeHtml(leagueName)} · ${season}</div>
+      <div class="table-row header"><span>#</span><span>Team</span><span class="pld">P</span><span class="pts">Pts</span></div>
+    `];
+    for (const row of table.slice(0, 20)) {
+      rows.push(`
+        <div class="table-row">
+          <span class="rank">${escapeHtml(row.intRank || "?")}</span>
+          <span>${escapeHtml(row.strTeam || "?")}</span>
+          <span class="pld">${escapeHtml(row.intPlayed ?? "?")}</span>
+          <span class="pts">${escapeHtml(row.intPoints ?? "?")}</span>
+        </div>
+      `);
+    }
+    container.innerHTML = `<div class="card">${rows.join("")}</div>`;
+  } catch (err) {
+    console.error("loadTable failed:", err);
+    container.innerHTML = errorState();
   }
-  container.innerHTML = `<div class="card">${rows.join("")}</div>`;
 }
 
 async function renderNews() {
   setScreen(loadingRow("Fetching headlines…"));
-  const follows = await getFollows();
-  const query = follows[0]?.strTeam || null;
+  try {
+    const follows = await getFollows();
+    const query = follows[0]?.strTeam || null;
 
-  const items = await fetchNews(query);
-  if (items.length === 0) {
-    setScreen(emptyState("No headlines", "Nothing found right now — try again shortly."));
-    return;
-  }
+    const items = await fetchNews(query);
+    if (items.length === 0) {
+      setScreen(emptyState("No headlines", "Nothing found right now — try again shortly."));
+      return;
+    }
 
-  const html = [`<div class="section-title">Latest news${query ? " · " + escapeHtml(query) : ""}</div>`];
-  for (const item of items) {
-    html.push(`
-      <a class="card news-item" href="${item.link}" target="_blank" rel="noopener">
-        <div class="news-title">${escapeHtml(item.title)}</div>
-        <div class="news-meta">${escapeHtml(item.published || "")}</div>
-      </a>
-    `);
+    const html = [`<div class="section-title">Latest news${query ? " · " + escapeHtml(query) : ""}</div>`];
+    for (const item of items) {
+      html.push(`
+        <a class="card news-item" href="${item.link}" target="_blank" rel="noopener">
+          <div class="news-title">${escapeHtml(item.title)}</div>
+          <div class="news-meta">${escapeHtml(item.published || "")}</div>
+        </a>
+      `);
+    }
+    setScreen(html.join(""));
+  } catch (err) {
+    console.error("renderNews failed:", err);
+    setScreen(errorState());
   }
-  setScreen(html.join(""));
 }
 
 async function renderMe() {
@@ -368,7 +445,15 @@ async function handleTeamSearch() {
   const resultsEl = document.getElementById("teamResults");
   resultsEl.innerHTML = loadingRow("Searching…");
 
-  const teams = await searchTeam(q);
+  let teams;
+  try {
+    teams = await searchTeam(q);
+  } catch (err) {
+    console.error("Team search failed:", err);
+    resultsEl.innerHTML = errorState();
+    return;
+  }
+
   if (teams.length === 0) {
     resultsEl.innerHTML = emptyState("Not found", `No team matching "${q}". Try the full club name.`);
     return;
@@ -396,6 +481,8 @@ async function handleTeamSearch() {
   });
 }
 
+// Daily rotating trivia — same bank/logic as the Telegram bot, so both
+// surfaces show the same question on a given day.
 const TRIVIA_QUESTIONS = [
   ["Which country has won the most FIFA World Cups?", "Brazil (5 titles)"],
   ["Which NBA team has won the most championships?", "Boston Celtics (18 titles)"],
@@ -432,6 +519,9 @@ function renderTrivia() {
   });
 }
 
+// ---------------------------------------------------------------------
+// Tab wiring
+// ---------------------------------------------------------------------
 const SCREENS = {
   today: renderToday,
   live: renderLive,
@@ -457,6 +547,9 @@ function wireTabs() {
   });
 }
 
+// ---------------------------------------------------------------------
+// Boot
+// ---------------------------------------------------------------------
 (function init() {
   initTelegram();
   wireTabs();
