@@ -22,12 +22,15 @@ html, body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   height: 100%;
   -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
 }
 
 body {
-  padding-bottom: 78px;
+  padding-bottom: 78px; /* leave room for fixed tabbar */
+  padding-top: env(safe-area-inset-top);
 }
 
+/* ---------- Ticker ---------- */
 .ticker-wrap {
   background: linear-gradient(90deg, var(--pitch-dim), var(--pitch));
   overflow: hidden;
@@ -56,6 +59,7 @@ body {
   100% { transform: translateX(-100%); }
 }
 
+/* ---------- Header ---------- */
 .app-header {
   padding: 18px 20px 10px;
 }
@@ -77,6 +81,7 @@ body {
   margin-top: 4px;
 }
 
+/* ---------- Screen / content ---------- */
 .screen {
   padding: 4px 16px 24px;
   min-height: 40vh;
@@ -165,6 +170,7 @@ body {
   margin-bottom: 6px;
 }
 
+/* ---------- Table (standings) ---------- */
 .table-row {
   display: grid;
   grid-template-columns: 28px 1fr 40px 40px;
@@ -188,6 +194,7 @@ body {
 .pts { font-weight: 700; text-align: right; }
 .pld { color: var(--text-dim); text-align: right; }
 
+/* ---------- News ---------- */
 .news-item {
   display: block;
   color: var(--text);
@@ -206,6 +213,7 @@ body {
   margin-top: 4px;
 }
 
+/* ---------- Buttons / inputs ---------- */
 .btn {
   background: var(--pitch);
   color: #06210F;
@@ -275,6 +283,7 @@ body {
   padding: 0;
 }
 
+/* ---------- Tab bar ---------- */
 .tabbar {
   position: fixed;
   bottom: 0;
@@ -305,6 +314,7 @@ body {
   color: var(--pitch);
 }
 
+/* ---------- Trivia ---------- */
 .trivia-card {
   background: linear-gradient(160deg, var(--surface), var(--surface-2));
   border: 1px solid var(--hairline);
